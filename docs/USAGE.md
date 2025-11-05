@@ -1,40 +1,51 @@
-# How to Use the Simulator
+# Cómo Usar el Simulador
 
-This document explains how to run the communications system simulator.
+Este documento explica cómo ejecutar el simulador del sistema de comunicaciones.
 
-## Prerequisites
+## Prerrequisitos
 
 - Python 3.x
 - `numpy`
 - `matplotlib`
+- `graphviz`
+- `Pillow`
 
-You can install the required packages using pip:
+Puede instalar los paquetes de Python requeridos usando pip:
 
 ```bash
-pip install numpy matplotlib
+pip install numpy matplotlib graphviz Pillow
 ```
 
-## Running the Simulator
+### Dependencia del Sistema: Graphviz
 
-To run the text simulation, execute the `main.py` script from the root directory of the project:
+La visualización del árbol de Huffman requiere que Graphviz esté instalado en su sistema.
+
+**En Debian/Ubuntu:**
+```bash
+sudo apt-get update
+sudo apt-get install graphviz
+```
+
+**En macOS (usando Homebrew):**
+```bash
+brew install graphviz
+```
+
+**En Windows:**
+Descargue e instale Graphviz desde el [sitio web oficial](https://graphviz.org/download/) y añada el directorio `bin` a su variable de entorno PATH.
+
+## Ejecutando el Simulador
+
+Para ejecutar la simulación, inicie la GUI ejecutando el script `main.py` desde el directorio raíz del proyecto:
 
 ```bash
 python3 main.py
 ```
 
-### Output
+### Uso de la GUI
 
-The simulator will print the following information to the console:
-
-- The original text.
-- The compressed bit stream from the Huffman coder.
-- The modulation scheme being used.
-- The channel conditions (SNR).
-- The decoded text.
-- A success or error message indicating if the decoded text matches the original.
-- The Bit Error Rate (BER).
-
-The simulator will also generate two PNG images in the root directory:
-
-- `transmitted_constellation.png`: A plot of the QPSK constellation before the channel.
-- `received_constellation.png`: A plot of the QPSK constellation after the channel noise has been added.
+1.  **SNR (dB):** Ingrese la Relación Señal a Ruido deseada.
+2.  **Select Input File:** Haga clic para seleccionar un archivo de texto de entrada.
+3.  **Run Simulation:** Inicie la simulación. La interfaz permanecerá responsiva.
+4.  **Resultados:** El texto original, el texto decodificado y las métricas (BER) se mostrarán en el área de texto.
+5.  **Gráficos:** Los gráficos generados (constelaciones, histograma LLR, árbol de Huffman) se mostrarán en sus respectivas pestañas.

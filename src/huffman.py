@@ -72,11 +72,13 @@ class HuffmanCoding:
             if node.char:
                 self.codes[node.char] = "0"
                 self.reverse_mapping["0"] = node.char
+                self.tree_root = node # Store the root
                 return
 
         # This case handles when merge_nodes has run and there is a single root.
         if len(self.heap) > 0 :
             root = heapq.heappop(self.heap)
+            self.tree_root = root # Store the root
             current_code = ""
             self.make_codes_helper(root, current_code)
 

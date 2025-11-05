@@ -4,3 +4,5 @@ __pycache__/
 
 # Generated files
 *.png
+huffman_tree
+gui_output.log
