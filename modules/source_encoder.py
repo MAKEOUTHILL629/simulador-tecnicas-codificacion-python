@@ -165,7 +165,9 @@ class SourceEncoder:
         num_blocks = len(audio_signal) // M
         
         for i in range(num_blocks):
-            block = audio_signal[i*M:(i+1)*2*M] if i*M + 2*M <= len(audio_signal) else audio_signal[i*M:]
+            start_idx = i * M
+            end_idx = min(start_idx + 2*M, len(audio_signal))
+            block = audio_signal[start_idx:end_idx]
             if len(block) < 2*M:
                 block = np.pad(block, (0, 2*M - len(block)))
             

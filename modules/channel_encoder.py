@@ -28,9 +28,9 @@ class ChannelEncoder:
         k = len(bits)  # Information bits
         n = int(k / self.code_rate)  # Total bits after encoding
         
-        # Ensure we have enough bits for the code rate
+        # Ensure we have enough bits for the code rate (n must be > k)
         if n <= k:
-            return bits
+            n = k + 1  # Add at least one parity bit
         
         # Simple systematic encoding: original bits + parity bits
         parity_bits = n - k

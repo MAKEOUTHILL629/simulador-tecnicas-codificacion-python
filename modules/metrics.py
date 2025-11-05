@@ -120,7 +120,7 @@ class IntegrityMetrics:
         mse = np.mean((orig.astype(float) - recv.astype(float)) ** 2)
         
         if mse == 0:
-            return 100  # Perfect match
+            return float('inf')  # Perfect match, theoretical PSNR is infinite
         
         # PSNR calculation
         max_pixel = 255.0

@@ -56,7 +56,8 @@ class WirelessChannel:
         # NLOS component (Rayleigh)
         h_real = np.random.randn(len(symbols))
         h_imag = np.random.randn(len(symbols))
-        h_nlos = (h_real + 1j * h_imag) / np.sqrt(2) * np.sqrt(1 / (K + 1))
+        # Correct calculation: divide variance by 2(K+1)
+        h_nlos = (h_real + 1j * h_imag) * np.sqrt(1 / (2 * (K + 1)))
         
         # Combined Rician channel coefficient
         h = h_los + h_nlos

@@ -86,9 +86,15 @@ class Demodulator:
             else:
                 dist_bit1.append(dist)
         
+        # Check if both lists have values (should always be true for valid constellation)
+        if not dist_bit0 or not dist_bit1:
+            # This should never happen with proper constellation mapping
+            # Return neutral LLR if it does
+            return 0.0
+        
         # Max-Log-MAP: min distance for each hypothesis
-        min_dist_0 = min(dist_bit0) if dist_bit0 else 0
-        min_dist_1 = min(dist_bit1) if dist_bit1 else 0
+        min_dist_0 = min(dist_bit0)
+        min_dist_1 = min(dist_bit1)
         
         # LLR calculation
         llr = (1 / N0) * (min_dist_1 - min_dist_0)

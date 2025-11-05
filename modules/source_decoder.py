@@ -29,22 +29,23 @@ class SourceDecoder:
         # For simulation, use character-level recovery
         # In real implementation, would use Huffman tree
         
-        # Estimate average bits per character
-        if len(original_text) > 0:
-            avg_bits_per_char = max(1, len(bits) // len(original_text))
-        else:
+        if len(original_text) == 0 or len(bits) == 0:
             return ""
         
-        # Reconstruct text (simplified)
+        # Use 8 bits per character for ASCII representation
+        bits_per_char = 8
+        
+        # Reconstruct text
         decoded_text = []
-        for i in range(0, min(len(bits), len(original_text) * avg_bits_per_char), avg_bits_per_char):
-            bit_chunk = bits[i:i+avg_bits_per_char]
-            # Map back to character (simplified)
-            char_idx = int(''.join(map(str, bit_chunk[:7])), 2) if len(bit_chunk) >= 7 else 32
-            if 32 <= char_idx <= 126:
-                decoded_text.append(chr(char_idx))
-            else:
-                decoded_text.append('?')
+        for i in range(0, min(len(bits), len(original_text) * bits_per_char), bits_per_char):
+            bit_chunk = bits[i:i+bits_per_char]
+            if len(bit_chunk) == bits_per_char:
+                # Map back to character
+                char_idx = int(''.join(map(str, bit_chunk)), 2)
+                if 32 <= char_idx <= 126:
+                    decoded_text.append(chr(char_idx))
+                else:
+                    decoded_text.append('?')
         
         result = ''.join(decoded_text[:len(original_text)])
         return result if result else "Error de decodificación"

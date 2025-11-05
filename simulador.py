@@ -277,8 +277,7 @@ if st.button("🚀 Iniciar Simulación", type="primary") and input_data is not N
         st.error(f"❌ Error durante la simulación: {str(e)}")
         st.exception(e)
 
-elif input_data is None and st.session_state.get('button_clicked', False):
-    st.warning("⚠️ Por favor, proporcione datos de entrada antes de iniciar la simulación")
+# Note: Warning handled by button logic above
 
 # Footer
 st.sidebar.markdown("---")
