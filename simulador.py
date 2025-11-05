@@ -211,7 +211,8 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                     st.subheader("2️⃣ Codificación de Canal (LDPC)")
                     st.write(f"Bits codificados: {len(encoded_channel)}")
                     st.write(f"Overhead: {len(encoded_channel) - len(encoded_source)} bits")
-                    fig2 = visualizer.plot_bitstream(encoded_channel[:100], "Bits con Redundancia")
+                    # Use improved visualization showing redundancy
+                    fig2 = visualizer.plot_channel_encoding_comparison(encoded_source, encoded_channel, "Bits con Redundancia LDPC")
                     st.pyplot(fig2)
             else:
                 encoded_channel = encoded_source

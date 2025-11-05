@@ -110,11 +110,20 @@ class IntegrityMetrics:
         
         # Ensure same dimensions
         if orig.shape != recv.shape:
-            # Resize received to match original
+            # For fair comparison, resize BOTH to the same size (the smaller one)
+            # This avoids quality loss from upscaling
+            target_h, target_w = min(orig.shape[0], recv.shape[0]), min(orig.shape[1], recv.shape[1])
+            
             from PIL import Image as PILImage
-            recv_pil = PILImage.fromarray(recv.astype(np.uint8))
-            recv_pil = recv_pil.resize((orig.shape[1], orig.shape[0]))
-            recv = np.array(recv_pil)
+            if orig.shape != (target_h, target_w):
+                orig_pil = PILImage.fromarray(orig.astype(np.uint8))
+                orig_pil = orig_pil.resize((target_w, target_h), PILImage.LANCZOS)
+                orig = np.array(orig_pil)
+            
+            if recv.shape != (target_h, target_w):
+                recv_pil = PILImage.fromarray(recv.astype(np.uint8))
+                recv_pil = recv_pil.resize((target_w, target_h), PILImage.LANCZOS)
+                recv = np.array(recv_pil)
         
         # Calculate MSE
         mse = np.mean((orig.astype(float) - recv.astype(float)) ** 2)
@@ -146,10 +155,19 @@ class IntegrityMetrics:
         
         # Ensure same dimensions
         if orig.shape != recv.shape:
+            # For fair comparison, resize BOTH to the same size (the smaller one)
+            target_h, target_w = min(orig.shape[0], recv.shape[0]), min(orig.shape[1], recv.shape[1])
+            
             from PIL import Image as PILImage
-            recv_pil = PILImage.fromarray(recv.astype(np.uint8))
-            recv_pil = recv_pil.resize((orig.shape[1], orig.shape[0]))
-            recv = np.array(recv_pil)
+            if orig.shape != (target_h, target_w):
+                orig_pil = PILImage.fromarray(orig.astype(np.uint8))
+                orig_pil = orig_pil.resize((target_w, target_h), PILImage.LANCZOS)
+                orig = np.array(orig_pil)
+            
+            if recv.shape != (target_h, target_w):
+                recv_pil = PILImage.fromarray(recv.astype(np.uint8))
+                recv_pil = recv_pil.resize((target_w, target_h), PILImage.LANCZOS)
+                recv = np.array(recv_pil)
         
         # Calculate SSIM
         ssim_value = ssim(orig, recv, data_range=255)

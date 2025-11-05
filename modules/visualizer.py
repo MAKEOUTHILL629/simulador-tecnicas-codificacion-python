@@ -11,8 +11,8 @@ from matplotlib.figure import Figure
 class Visualizer:
     """Create visualizations for the simulator"""
     
-    def plot_bitstream(self, bits, title="Bitstream"):
-        """Plot a bitstream"""
+    def plot_bitstream(self, bits, title="Bitstream", show_stats=True):
+        """Plot a bitstream with statistics"""
         fig = Figure(figsize=(10, 3))
         ax = fig.add_subplot(111)
         
@@ -26,6 +26,53 @@ class Visualizer:
         ax.set_ylim([-0.5, 1.5])
         ax.set_yticks([0, 1])
         ax.grid(True, alpha=0.3)
+        
+        # Add statistics
+        if show_stats and len(bits) > 0:
+            ones = np.sum(bits == 1)
+            zeros = np.sum(bits == 0)
+            total = len(bits)
+            stats_text = f'Total: {total} bits\n1s: {ones} ({ones/total*100:.1f}%)\n0s: {zeros} ({zeros/total*100:.1f}%)'
+            ax.text(0.02, 0.98, stats_text,
+                   transform=ax.transAxes, verticalalignment='top',
+                   bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7),
+                   fontsize=9)
+        
+        return fig
+    
+    def plot_channel_encoding_comparison(self, source_bits, channel_bits, title="Codificación de Canal"):
+        """Plot showing redundancy added by channel encoder"""
+        fig = Figure(figsize=(10, 4))
+        ax = fig.add_subplot(111)
+        
+        # Show structure of channel encoded bits
+        sample_size = min(200, len(channel_bits))
+        x = np.arange(sample_size)
+        
+        # Plot channel bits
+        ax.step(x, channel_bits[:sample_size], where='post', linewidth=1.5, label='Bits con LDPC', alpha=0.8)
+        
+        # Highlight redundancy pattern (simplified visualization)
+        # In LDPC, systematic part comes first, then parity
+        systematic_len = len(source_bits)
+        if sample_size > systematic_len:
+            ax.axvspan(systematic_len, sample_size, alpha=0.2, color='red', label='Bits de Paridad')
+        
+        ax.set_xlabel('Bit Index')
+        ax.set_ylabel('Bit Value')
+        ax.set_title(title)
+        ax.set_ylim([-0.5, 1.5])
+        ax.set_yticks([0, 1])
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc='upper right')
+        
+        # Add statistics
+        info_rate = len(source_bits) / len(channel_bits)
+        stats_text = f'Datos: {len(source_bits)} bits\nTotal: {len(channel_bits)} bits\nRedundancia: {len(channel_bits)-len(source_bits)} bits\nTasa: {info_rate:.2f}'
+        ax.text(0.02, 0.70, stats_text,
+               transform=ax.transAxes, verticalalignment='top',
+               bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8),
+               fontsize=9)
         
         return fig
     
