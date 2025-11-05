@@ -40,37 +40,18 @@ class SourceEncoder:
             raise ValueError(f"Unknown source type: {self.source_type}")
     
     def _encode_text(self, text):
-        """Huffman encoding for text"""
+        """Simple 8-bit ASCII encoding for text (educational purposes)"""
         if not text:
             return np.array([], dtype=int)
         
-        # Calculate frequency
-        freq = Counter(text)
-        
-        # Build Huffman tree
-        heap = [HuffmanNode(char, count) for char, count in freq.items()]
-        heapq.heapify(heap)
-        
-        while len(heap) > 1:
-            left = heapq.heappop(heap)
-            right = heapq.heappop(heap)
-            
-            merged = HuffmanNode(None, left.freq + right.freq)
-            merged.left = left
-            merged.right = right
-            
-            heapq.heappush(heap, merged)
-        
-        self.huffman_tree = heap[0] if heap else None
-        
-        # Generate codes
-        self._generate_huffman_codes(self.huffman_tree, "")
-        
-        # Encode text to bits
+        # Use simple 8-bit ASCII encoding for better reconstruction
+        # This makes the educational simulator more understandable
         bits = []
         for char in text:
-            code = self.huffman_codes.get(char, "0")
-            bits.extend([int(b) for b in code])
+            # Convert character to 8-bit binary
+            ascii_val = ord(char)
+            bits_str = format(ascii_val, '08b')
+            bits.extend([int(b) for b in bits_str])
         
         return np.array(bits, dtype=int)
     
