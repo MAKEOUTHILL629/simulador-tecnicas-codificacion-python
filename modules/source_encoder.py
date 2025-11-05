@@ -172,7 +172,8 @@ class SourceEncoder:
                 if i+8 <= h and j+8 <= w:
                     block = residual[i:i+8, j:j+8]
                     dct_block = self._dct2d(block)
-                    quantized = np.round(dct_block / 10).astype(int)
+                    # Reduced quantization to /2 for high quality
+                    quantized = np.round(dct_block / 2).astype(int)
                     dct_coeffs.extend(quantized.flatten())
         
         # Convert to binary

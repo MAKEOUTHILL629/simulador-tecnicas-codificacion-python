@@ -292,12 +292,23 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                 if source_type == "Texto":
                     st.text_area("Texto Recibido:", output_data, height=100)
                 elif source_type == "Imagen":
-                    st.image(output_data, caption="Imagen Recibida", width=300)
+                    # Show input and output image side-by-side
+                    col_img1, col_img2 = st.columns(2)
+                    with col_img1:
+                        st.image(input_data, caption="Original", use_column_width=True)
+                    with col_img2:
+                        st.image(output_data, caption="Recibida", use_column_width=True)
                 elif source_type == "Audio":
-                    fig7 = visualizer.plot_audio_signal(output_data, "Señal de Audio Recibida")
+                    # Show input and output audio comparison
+                    fig7 = visualizer.plot_audio_comparison(input_data, output_data)
                     st.pyplot(fig7)
                 elif source_type == "Video":
-                    st.image(output_data, caption="Frame Recibido", width=300)
+                    # Show input and output frame side-by-side
+                    col_vid1, col_vid2 = st.columns(2)
+                    with col_vid1:
+                        st.image(input_data, caption="Frame Original", use_column_width=True)
+                    with col_vid2:
+                        st.image(output_data, caption="Frame Recibido", use_column_width=True)
         
             # Metrics
             with col8:

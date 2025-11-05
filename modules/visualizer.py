@@ -141,6 +141,38 @@ class Visualizer:
         
         return fig
     
+    def plot_audio_comparison(self, original_signal, received_signal):
+        """Plot original and received audio waveforms for comparison"""
+        fig = Figure(figsize=(12, 6))
+        
+        # Original signal
+        ax1 = fig.add_subplot(211)
+        time1 = np.arange(len(original_signal))
+        ax1.plot(time1, original_signal, linewidth=0.5, color='blue', alpha=0.7)
+        ax1.set_ylabel('Amplitude')
+        ax1.set_title('Señal de Audio Original')
+        ax1.grid(True, alpha=0.3)
+        ax1.set_xlim([0, len(original_signal)])
+        
+        # Received signal
+        ax2 = fig.add_subplot(212)
+        time2 = np.arange(len(received_signal))
+        ax2.plot(time2, received_signal, linewidth=0.5, color='red', alpha=0.7)
+        ax2.set_xlabel('Sample')
+        ax2.set_ylabel('Amplitude')
+        ax2.set_title('Señal de Audio Recibida')
+        ax2.grid(True, alpha=0.3)
+        ax2.set_xlim([0, len(received_signal)])
+        
+        # Add correlation metric
+        if len(original_signal) == len(received_signal):
+            correlation = np.corrcoef(original_signal, received_signal)[0, 1]
+            fig.suptitle(f'Comparación de Audio (Correlación: {correlation:.4f})', 
+                        fontsize=14, fontweight='bold')
+        
+        fig.tight_layout()
+        return fig
+    
     def plot_spectrum(self, signal, sample_rate, title="Frequency Spectrum"):
         """Plot frequency spectrum"""
         fig = Figure(figsize=(10, 4))

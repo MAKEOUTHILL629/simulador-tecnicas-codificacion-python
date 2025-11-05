@@ -86,8 +86,8 @@ class SourceDecoder:
             for j in range(w_blocks):
                 if coeff_idx + 64 <= len(coeffs):
                     block_coeffs = np.array(coeffs[coeff_idx:coeff_idx+64]).reshape(8, 8)
-                    # Dequantize
-                    dequantized = block_coeffs * 10
+                    # Dequantize - updated to *2 to match encoder
+                    dequantized = block_coeffs * 2
                     # IDCT
                     spatial_block = self._idct2d(dequantized)
                     reconstructed[i*8:(i+1)*8, j*8:(j+1)*8] = spatial_block
