@@ -118,41 +118,24 @@ class SourceDecoder:
         return spatial
     
     def _decode_audio(self, bits, original_audio):
-        """MDCT-based decoding for audio"""
-        # Decode bits to MDCT coefficients
-        M = 256
-        coeffs = []
+        """Simplified audio decoding for educational purposes"""
+        # Decode bits to samples (12 bits per sample)
+        samples = []
+        for i in range(0, len(bits), 12):
+            if i + 12 <= len(bits):
+                val = int(''.join(map(str, bits[i:i+12])), 2)
+                # Convert from unsigned to signed
+                if val > 2047:
+                    val = val - 4096
+                samples.append(val / 2047.0)
         
-        for i in range(0, min(len(bits), 8000), 16):
-            if i + 16 <= len(bits):
-                val = int(''.join(map(str, bits[i:i+16])), 2)
-                # Convert to signed
-                if val > 32767:
-                    val = val - 65536
-                coeffs.append(val / 100.0)
+        # Pad or trim to match original length
+        audio_signal = np.array(samples)
+        if len(audio_signal) < len(original_audio):
+            audio_signal = np.pad(audio_signal, (0, len(original_audio) - len(audio_signal)))
+        else:
+            audio_signal = audio_signal[:len(original_audio)]
         
-        # IMDCT reconstruction
-        audio_signal = []
-        for i in range(0, len(coeffs), M):
-            block = coeffs[i:i+M]
-            if len(block) < M:
-                block = np.pad(block, (0, M - len(block)))
-            
-            # IMDCT
-            time_block = []
-            for n in range(2*M):
-                sum_val = 0
-                for k in range(M):
-                    sum_val += block[k] * np.cos(np.pi/M * (n + 0.5 + M/2) * (k + 0.5))
-                time_block.append(sum_val)
-            
-            # Window and overlap-add
-            window = np.sin(np.pi * (np.arange(2*M) + 0.5) / (2*M))
-            windowed = np.array(time_block) * window
-            audio_signal.extend(windowed[:M])
-        
-        # Return signal of same length as original
-        audio_signal = np.array(audio_signal[:len(original_audio)])
         return audio_signal
     
     def _decode_video(self, bits, original_frame):

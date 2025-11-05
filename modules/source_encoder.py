@@ -132,47 +132,22 @@ class SourceEncoder:
         return dct
     
     def _encode_audio(self, audio_signal):
-        """MDCT-based encoding for audio (AAC-like)"""
-        # MDCT with windowing
-        M = 256  # Transform size
+        """Simplified audio encoding for educational purposes"""
+        # Normalize audio to [-1, 1] range
+        max_val = np.max(np.abs(audio_signal))
+        if max_val > 0:
+            normalized = audio_signal / max_val
+        else:
+            normalized = audio_signal
         
-        # Pad signal if necessary
-        pad_length = M - (len(audio_signal) % M)
-        if pad_length < M:
-            audio_signal = np.pad(audio_signal, (0, pad_length))
+        # Quantize to 12-bit representation (-2048 to 2047)
+        quantized = np.round(normalized * 2047).astype(int)
         
-        # Apply MDCT
-        mdct_coeffs = []
-        num_blocks = len(audio_signal) // M
-        
-        for i in range(num_blocks):
-            start_idx = i * M
-            end_idx = min(start_idx + 2*M, len(audio_signal))
-            block = audio_signal[start_idx:end_idx]
-            if len(block) < 2*M:
-                block = np.pad(block, (0, 2*M - len(block)))
-            
-            # Simple windowing
-            window = np.sin(np.pi * (np.arange(2*M) + 0.5) / (2*M))
-            windowed = block * window
-            
-            # MDCT calculation
-            mdct_block = []
-            for k in range(M):
-                sum_val = 0
-                for n in range(2*M):
-                    sum_val += windowed[n] * np.cos(np.pi/M * (n + 0.5 + M/2) * (k + 0.5))
-                mdct_block.append(sum_val)
-            
-            # Quantization
-            quantized = np.round(np.array(mdct_block) * 100).astype(int)
-            mdct_coeffs.extend(quantized)
-        
-        # Convert to binary
+        # Convert to binary (12 bits per sample)
         bits = []
-        for coeff in mdct_coeffs[:500]:  # Limit for simulation
-            val = int(coeff) & 0xFFFF
-            bits.extend([int(b) for b in format(val, '016b')])
+        for sample in quantized:
+            val = int(sample) & 0xFFF  # 12 bits
+            bits.extend([int(b) for b in format(val, '012b')])
         
         return np.array(bits, dtype=int)
     
