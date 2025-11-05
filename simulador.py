@@ -95,6 +95,7 @@ if source_type == "Texto":
     if input_text and len(input_text.strip()) > 0:
         input_data = input_text
         st.session_state.input_data = input_text
+        st.session_state.source_type = "Texto"
         st.success(f"✓ Texto listo: {len(input_text)} caracteres")
         
 elif source_type == "Imagen":
@@ -102,8 +103,15 @@ elif source_type == "Imagen":
     if uploaded_file:
         input_data = Image.open(uploaded_file)
         st.session_state.input_data = input_data
+        st.session_state.source_type = "Imagen"
         st.image(input_data, caption="Imagen Original", width=300)
         st.success("✓ Imagen cargada")
+    
+    # Use stored image data if available and matches current source type
+    if (st.session_state.input_data is not None and 
+        st.session_state.get('source_type') == "Imagen" and
+        isinstance(st.session_state.input_data, Image.Image)):
+        input_data = st.session_state.input_data
         
 elif source_type == "Audio":
     st.info("📌 Simulación con señal de audio sintética")
@@ -115,14 +123,17 @@ elif source_type == "Audio":
         t = np.linspace(0, duration, int(sample_rate * duration))
         audio_signal = np.sin(2 * np.pi * frequency * t)
         st.session_state.input_data = audio_signal
+        st.session_state.source_type = "Audio"
         st.session_state.audio_duration = duration
         st.session_state.audio_frequency = frequency
         st.success(f"✓ Audio generado: {duration}s a {frequency}Hz")
     
-    # Use stored audio data if available
-    if st.session_state.input_data is not None and isinstance(st.session_state.input_data, np.ndarray):
-        if len(st.session_state.input_data.shape) == 1:  # 1D array = audio
-            input_data = st.session_state.input_data
+    # Use stored audio data if available and matches current source type
+    if (st.session_state.input_data is not None and 
+        st.session_state.get('source_type') == "Audio" and
+        isinstance(st.session_state.input_data, np.ndarray) and
+        len(st.session_state.input_data.shape) == 1):  # 1D array = audio
+        input_data = st.session_state.input_data
         
 elif source_type == "Video":
     st.info("📌 Simulación con frames de video sintéticos")
@@ -130,17 +141,22 @@ elif source_type == "Video":
         # Generate synthetic video frame (simple pattern)
         video_frame = np.random.randint(0, 256, (64, 64, 3), dtype=np.uint8)
         st.session_state.input_data = video_frame
+        st.session_state.source_type = "Video"
         st.image(video_frame, caption="Frame de Video", width=300)
         st.success("✓ Frame generado")
     
-    # Use stored video frame if available
-    if st.session_state.input_data is not None and isinstance(st.session_state.input_data, np.ndarray):
-        if len(st.session_state.input_data.shape) == 3:  # 3D array = video frame
-            input_data = st.session_state.input_data
+    # Use stored video frame if available and matches current source type
+    if (st.session_state.input_data is not None and 
+        st.session_state.get('source_type') == "Video" and
+        isinstance(st.session_state.input_data, np.ndarray) and
+        len(st.session_state.input_data.shape) == 3):  # 3D array = video frame
+        input_data = st.session_state.input_data
 
-# Use session state data if current input_data is None
+# Use session state data if current input_data is None and source type matches
 if input_data is None and st.session_state.input_data is not None:
-    input_data = st.session_state.input_data
+    # Only use cached data if the source type matches
+    if st.session_state.get('source_type') == source_type:
+        input_data = st.session_state.input_data
 
 # Process button
 if st.button("🚀 Iniciar Simulación", type="primary"):
