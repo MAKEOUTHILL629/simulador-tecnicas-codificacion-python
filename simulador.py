@@ -117,19 +117,104 @@ elif source_type == "Imagen":
         input_data = st.session_state.input_data
         
 elif source_type == "Audio":
-    st.info("📌 Simulación con señal de audio sintética")
-    duration = st.slider("Duración (segundos)", 0.1, 2.0, 0.5, 0.1)
-    frequency = st.slider("Frecuencia (Hz)", 100, 2000, 440)
-    if st.button("Generar Audio"):
-        # Generate synthetic audio signal
+    st.info("🎵 Cargue un audio o genere señal sintética")
+    
+    # Option 1: Upload audio file
+    upload_option = st.radio("Método de entrada:", ["Cargar archivo de audio", "Generar señal sintética"])
+    
+    if upload_option == "Cargar archivo de audio":
+        uploaded_audio = st.file_uploader("Cargar audio (WAV, MP3)", type=["wav", "mp3"])
+        
+        if uploaded_audio is not None:
+            import scipy.io.wavfile as wavfile
+            import io
+            
+            try:
+                # Read audio file
+                if uploaded_audio.name.endswith('.wav'):
+                    sample_rate, audio_data = wavfile.read(io.BytesIO(uploaded_audio.read()))
+                    
+                    # Convert to mono if stereo
+                    if len(audio_data.shape) > 1:
+                        audio_data = audio_data.mean(axis=1)
+                    
+                    # Normalize to [-1, 1]
+                    audio_data = audio_data.astype(np.float32) / np.max(np.abs(audio_data))
+                    
+                    # Limit duration for simulation (max 2 seconds)
+                    max_samples = int(2.0 * sample_rate)
+                    if len(audio_data) > max_samples:
+                        audio_data = audio_data[:max_samples]
+                        st.warning(f"⚠️ Audio recortado a 2 segundos para la simulación")
+                    
+                    duration = len(audio_data) / sample_rate
+                    
+                    # Store audio
+                    st.session_state.input_data = audio_data
+                    st.session_state.source_type = "Audio"
+                    st.session_state.audio_sample_rate = sample_rate
+                    st.session_state.audio_duration = duration
+                    st.session_state.audio_from_file = True
+                    
+                    # Display waveform
+                    fig, ax = plt.subplots(figsize=(10, 3))
+                    t = np.linspace(0, duration, len(audio_data))
+                    ax.plot(t, audio_data, linewidth=0.5)
+                    ax.set_xlabel('Tiempo (s)')
+                    ax.set_ylabel('Amplitud')
+                    ax.set_title(f'Señal de Audio Cargada ({duration:.2f}s, {sample_rate}Hz)')
+                    ax.grid(True, alpha=0.3)
+                    st.pyplot(fig)
+                    plt.close()
+                    
+                    st.success(f"✓ Audio cargado: {duration:.2f}s a {sample_rate}Hz ({len(audio_data)} muestras)")
+                    input_data = audio_data
+                    
+                else:  # MP3
+                    st.error("❌ Por favor convierta el MP3 a WAV. Los archivos MP3 requieren librería adicional.")
+                    
+            except Exception as e:
+                st.error(f"❌ Error al cargar audio: {str(e)}")
+    
+    else:  # Generate synthetic audio
+        st.markdown("**Parámetros de generación:**")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            duration = st.slider("Duración (segundos)", 0.1, 2.0, 0.5, 0.1, key="audio_duration_slider")
+        with col2:
+            frequency = st.slider("Frecuencia (Hz)", 100, 2000, 440, key="audio_freq_slider")
+        
+        # Real-time waveform preview
         sample_rate = 8000
         t = np.linspace(0, duration, int(sample_rate * duration))
-        audio_signal = np.sin(2 * np.pi * frequency * t)
-        st.session_state.input_data = audio_signal
-        st.session_state.source_type = "Audio"
-        st.session_state.audio_duration = duration
-        st.session_state.audio_frequency = frequency
-        st.success(f"✓ Audio generado: {duration}s a {frequency}Hz")
+        audio_signal_preview = np.sin(2 * np.pi * frequency * t)
+        
+        # Display real-time preview
+        fig, ax = plt.subplots(figsize=(10, 3))
+        # Show only first 100ms for clarity
+        preview_duration = min(0.1, duration)
+        preview_samples = int(sample_rate * preview_duration)
+        t_preview = t[:preview_samples]
+        ax.plot(t_preview, audio_signal_preview[:preview_samples], linewidth=1.5)
+        ax.set_xlabel('Tiempo (s)')
+        ax.set_ylabel('Amplitud')
+        ax.set_title(f'Vista Previa: Onda Senoidal {frequency}Hz (primeros {preview_duration}s)')
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+        plt.close()
+        
+        if st.button("🎵 Generar y Usar este Audio"):
+            # Generate full audio signal
+            audio_signal = np.sin(2 * np.pi * frequency * t)
+            st.session_state.input_data = audio_signal
+            st.session_state.source_type = "Audio"
+            st.session_state.audio_duration = duration
+            st.session_state.audio_frequency = frequency
+            st.session_state.audio_sample_rate = sample_rate
+            st.session_state.audio_from_file = False
+            st.success(f"✓ Audio generado: {duration}s a {frequency}Hz")
+            input_data = audio_signal
     
     # Use stored audio data if available and matches current source type
     if (st.session_state.input_data is not None and 
@@ -376,6 +461,29 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                     # Show input and output audio comparison
                     fig7 = visualizer.plot_audio_comparison(input_data, output_data)
                     st.pyplot(fig7)
+                    
+                    # Add audio download functionality
+                    import scipy.io.wavfile as wavfile
+                    
+                    # Get sample rate from session state or use default
+                    sample_rate = st.session_state.get('audio_sample_rate', 8000)
+                    
+                    # Convert audio to int16 format for WAV export
+                    audio_to_save = (output_data * 32767).astype(np.int16)
+                    
+                    # Create WAV file in memory
+                    wav_buffer = BytesIO()
+                    wavfile.write(wav_buffer, sample_rate, audio_to_save)
+                    wav_buffer.seek(0)
+                    
+                    # Download button
+                    st.download_button(
+                        label="📥 Descargar Audio Recibido (WAV)",
+                        data=wav_buffer,
+                        file_name=f"audio_recibido_{snr_db}dB.wav",
+                        mime="audio/wav",
+                        help="Descargar el audio después de la simulación de transmisión"
+                    )
                 elif source_type == "Video":
                     # Show input and output frame side-by-side
                     col_vid1, col_vid2 = st.columns(2)
