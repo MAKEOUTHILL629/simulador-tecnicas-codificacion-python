@@ -12,27 +12,44 @@ class Visualizer:
     """Create visualizations for the simulator"""
     
     def plot_bitstream(self, bits, title="Bitstream", show_stats=True):
-        """Plot a bitstream with statistics"""
+        """Plot a bitstream with statistics using smart sampling for large bitstreams"""
         fig = Figure(figsize=(10, 3))
         ax = fig.add_subplot(111)
         
-        # Limit visualization to first 100 bits
-        bits_to_plot = bits[:100]
+        # Smart sampling: For large bitstreams, show representative samples
+        total_bits = len(bits)
         
-        ax.step(range(len(bits_to_plot)), bits_to_plot, where='post', linewidth=2)
-        ax.set_xlabel('Bit Index')
+        if total_bits <= 1000:
+            # Small bitstream: show first 100 bits
+            bits_to_plot = bits[:100]
+            x_indices = np.arange(len(bits_to_plot))
+            x_label = 'Bit Index'
+        else:
+            # Large bitstream: sample 500 bits evenly across entire bitstream
+            sample_size = 500
+            indices = np.linspace(0, total_bits - 1, sample_size, dtype=int)
+            bits_to_plot = bits[indices]
+            x_indices = indices
+            x_label = 'Bit Index (sampled across full bitstream)'
+        
+        ax.step(x_indices, bits_to_plot, where='post', linewidth=1.5)
+        ax.set_xlabel(x_label)
         ax.set_ylabel('Bit Value')
         ax.set_title(title)
         ax.set_ylim([-0.5, 1.5])
         ax.set_yticks([0, 1])
         ax.grid(True, alpha=0.3)
         
-        # Add statistics
+        # Add statistics (calculated on FULL bitstream)
         if show_stats and len(bits) > 0:
             ones = np.sum(bits == 1)
             zeros = np.sum(bits == 0)
             total = len(bits)
-            stats_text = f'Total: {total} bits\n1s: {ones} ({ones/total*100:.1f}%)\n0s: {zeros} ({zeros/total*100:.1f}%)'
+            stats_text = f'Total: {total:,} bits\n1s: {ones:,} ({ones/total*100:.1f}%)\n0s: {zeros:,} ({zeros/total*100:.1f}%)'
+            
+            if total_bits > 1000:
+                stats_text += f'\n\n(Mostrando {len(bits_to_plot)} bits\nmuestreados uniformemente)'
+            
             ax.text(0.02, 0.98, stats_text,
                    transform=ax.transAxes, verticalalignment='top',
                    bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7),
@@ -41,24 +58,48 @@ class Visualizer:
         return fig
     
     def plot_channel_encoding_comparison(self, source_bits, channel_bits, title="Codificación de Canal"):
-        """Plot showing redundancy added by channel encoder"""
+        """Plot showing redundancy added by channel encoder with smart sampling"""
         fig = Figure(figsize=(10, 4))
         ax = fig.add_subplot(111)
         
-        # Show structure of channel encoded bits
-        sample_size = min(200, len(channel_bits))
-        x = np.arange(sample_size)
+        # Smart sampling for large bitstreams
+        total_channel = len(channel_bits)
+        total_source = len(source_bits)
+        
+        if total_channel <= 2000:
+            # Small bitstream: show first 200 bits
+            sample_size = min(200, total_channel)
+            channel_sample = channel_bits[:sample_size]
+            x = np.arange(sample_size)
+            x_label = 'Bit Index'
+            sampling_note = ''
+        else:
+            # Large bitstream: sample 500 bits evenly
+            sample_size = 500
+            indices = np.linspace(0, total_channel - 1, sample_size, dtype=int)
+            channel_sample = channel_bits[indices]
+            x = indices
+            x_label = 'Bit Index (sampled across full bitstream)'
+            sampling_note = f'\n(Mostrando {sample_size} bits\nmuestreados)'
         
         # Plot channel bits
-        ax.step(x, channel_bits[:sample_size], where='post', linewidth=1.5, label='Bits con LDPC', alpha=0.8)
+        ax.step(x, channel_sample, where='post', linewidth=1.5, label='Bits con LDPC', alpha=0.8)
         
         # Highlight redundancy pattern (simplified visualization)
         # In LDPC, systematic part comes first, then parity
-        systematic_len = len(source_bits)
-        if sample_size > systematic_len:
-            ax.axvspan(systematic_len, sample_size, alpha=0.2, color='red', label='Bits de Paridad')
+        if total_channel > total_source:
+            # Calculate where parity starts in the sample
+            if total_channel <= 2000:
+                parity_start = total_source
+                if sample_size > parity_start:
+                    ax.axvspan(parity_start, sample_size, alpha=0.2, color='red', label='Bits de Paridad')
+            else:
+                # For sampled data, show approximate parity region
+                parity_ratio = total_source / total_channel
+                parity_start_idx = int(sample_size * parity_ratio)
+                ax.axvspan(x[parity_start_idx], x[-1], alpha=0.2, color='red', label='Región de Paridad LDPC')
         
-        ax.set_xlabel('Bit Index')
+        ax.set_xlabel(x_label)
         ax.set_ylabel('Bit Value')
         ax.set_title(title)
         ax.set_ylim([-0.5, 1.5])
@@ -66,13 +107,14 @@ class Visualizer:
         ax.grid(True, alpha=0.3)
         ax.legend(loc='upper right')
         
-        # Add statistics
-        info_rate = len(source_bits) / len(channel_bits)
-        stats_text = f'Datos: {len(source_bits)} bits\nTotal: {len(channel_bits)} bits\nRedundancia: {len(channel_bits)-len(source_bits)} bits\nTasa: {info_rate:.2f}'
+        # Add statistics (calculated on FULL bitstream)
+        info_rate = total_source / total_channel if total_channel > 0 else 0
+        redundancy = total_channel - total_source
+        stats_text = f'Datos: {total_source:,} bits\nTotal: {total_channel:,} bits\nRedundancia: {redundancy:,} bits\nTasa: {info_rate:.2f}{sampling_note}'
         ax.text(0.02, 0.70, stats_text,
-               transform=ax.transAxes, verticalalignment='top',
-               bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8),
-               fontsize=9)
+                transform=ax.transAxes, verticalalignment='top',
+                bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8),
+                fontsize=8)
         
         return fig
     
