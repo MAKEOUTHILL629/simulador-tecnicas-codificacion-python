@@ -8,6 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from io import BytesIO
 from PIL import Image
+import cv2
+import tempfile
+import os
 
 from modules.source_encoder import SourceEncoder
 from modules.channel_encoder import ChannelEncoder
@@ -136,14 +139,85 @@ elif source_type == "Audio":
         input_data = st.session_state.input_data
         
 elif source_type == "Video":
-    st.info("📌 Simulación con frames de video sintéticos")
-    if st.button("Generar Frame"):
+    st.info("📹 Cargue un video o genere un frame sintético")
+    
+    # Option 1: Upload video file
+    uploaded_video = st.file_uploader("Cargar video (MP4, AVI, MOV)", type=["mp4", "avi", "mov", "mkv", "webm"])
+    
+    if uploaded_video is not None:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_video.name)[1]) as tmp_file:
+            tmp_file.write(uploaded_video.read())
+            tmp_path = tmp_file.name
+        
+        try:
+            # Open video with OpenCV
+            cap = cv2.VideoCapture(tmp_path)
+            
+            if cap.isOpened():
+                # Get video properties
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                
+                st.success(f"✓ Video cargado: {width}x{height}, {total_frames} frames, {fps:.1f} FPS")
+                
+                # Frame selection slider
+                frame_number = st.slider("Seleccione frame para simular", 0, total_frames-1, total_frames//2)
+                
+                # Extract selected frame
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+                ret, frame = cap.read()
+                
+                if ret:
+                    # Convert BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    
+                    # Store frame
+                    st.session_state.input_data = frame_rgb
+                    st.session_state.source_type = "Video"
+                    st.session_state.video_info = {
+                        'width': width,
+                        'height': height,
+                        'total_frames': total_frames,
+                        'fps': fps,
+                        'frame_number': frame_number
+                    }
+                    
+                    # Display frame
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.image(frame_rgb, caption=f"Frame {frame_number}/{total_frames-1}", use_column_width=True)
+                    with col2:
+                        st.metric("Resolución", f"{width}x{height}")
+                        st.metric("FPS", f"{fps:.1f}")
+                        st.metric("Duración", f"{total_frames/fps:.2f}s")
+                    
+                    input_data = frame_rgb
+                else:
+                    st.error("No se pudo leer el frame seleccionado")
+            else:
+                st.error("No se pudo abrir el video")
+            
+            cap.release()
+        except Exception as e:
+            st.error(f"Error al procesar video: {str(e)}")
+        finally:
+            # Clean up temporary file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+    
+    # Option 2: Generate synthetic frame
+    st.markdown("**O genere un frame sintético:**")
+    if st.button("Generar Frame Sintético"):
         # Generate synthetic video frame (simple pattern)
         video_frame = np.random.randint(0, 256, (64, 64, 3), dtype=np.uint8)
         st.session_state.input_data = video_frame
         st.session_state.source_type = "Video"
-        st.image(video_frame, caption="Frame de Video", width=300)
-        st.success("✓ Frame generado")
+        st.session_state.video_info = None
+        st.image(video_frame, caption="Frame Sintético", width=300)
+        st.success("✓ Frame sintético generado")
     
     # Use stored video frame if available and matches current source type
     if (st.session_state.input_data is not None and 
@@ -333,11 +407,19 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                 st.metric("BER (Bit Error Rate)", f"{ber:.6f}")
                 st.metric("Tasa de Bits Correctos", f"{(1-ber)*100:.2f}%")
             
-                if source_type == "Imagen" and isinstance(output_data, (np.ndarray, Image.Image)):
+                if source_type in ["Imagen", "Video"] and isinstance(output_data, (np.ndarray, Image.Image)):
                     psnr = integrity_metrics.calculate_psnr(input_data, output_data)
                     ssim = integrity_metrics.calculate_ssim(input_data, output_data)
                     st.metric("PSNR", f"{psnr:.2f} dB")
                     st.metric("SSIM", f"{ssim:.4f}")
+                    
+                    # Show video info if available
+                    if source_type == "Video" and hasattr(st.session_state, 'video_info') and st.session_state.video_info is not None:
+                        info = st.session_state.video_info
+                        st.write("**Información del Video:**")
+                        st.caption(f"Resolución: {info['width']}x{info['height']}")
+                        st.caption(f"Frame: {info['frame_number']}/{info['total_frames']-1}")
+                        st.caption(f"FPS: {info['fps']:.1f}")
         
             status_text.text("✅ Simulación completada!")
             progress_bar.progress(1.0)
