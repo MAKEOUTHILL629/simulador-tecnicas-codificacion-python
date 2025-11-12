@@ -305,7 +305,7 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                 st.subheader("3️⃣ Modulación")
                 st.write(f"Símbolos: {len(modulated_signal)}")
                 st.write(f"Modulación: {modulation}")
-                fig3 = visualizer.plot_constellation(modulated_signal, f"Constelación {modulation}")
+                fig3 = visualizer.plot_constellation(modulated_signal, modulation, f"Constelación {modulation}")
                 st.pyplot(fig3)
         
             # Stage 4: Channel
@@ -318,7 +318,7 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                 st.subheader("4️⃣ Canal Inalámbrico")
                 st.write(f"Tipo: {fading_type}")
                 st.write(f"SNR: {snr_db} dB, Eb/N0: {eb_n0_db} dB")
-                fig4 = visualizer.plot_constellation(received_signal, "Señal Recibida (con ruido)")
+                fig4 = visualizer.plot_constellation(received_signal, modulation, "Señal Recibida (con ruido)")
                 st.pyplot(fig4)
         
             # Stage 5: Demodulation

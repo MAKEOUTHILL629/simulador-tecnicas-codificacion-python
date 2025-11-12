@@ -68,48 +68,54 @@ class SourceEncoder:
         self._generate_huffman_codes(node.right, code + "1")
     
     def _encode_image(self, image):
-        """DCT-based encoding for images (JPEG-like)"""
-        # Convert PIL Image to numpy array
+        """DCT-based encoding for images (JPEG-like) - RGB support"""
+        # Convert PIL Image to numpy array, preserving RGB
         if isinstance(image, Image.Image):
-            img_array = np.array(image.convert('L'))  # Convert to grayscale
+            img_array = np.array(image.convert('RGB'))  # Keep RGB
         else:
             img_array = np.array(image)
-            if len(img_array.shape) == 3:
-                img_array = np.mean(img_array, axis=2).astype(np.uint8)
+            if len(img_array.shape) == 2:
+                # Convert grayscale to RGB
+                img_array = np.stack([img_array] * 3, axis=2)
         
         # Resize to manageable size for simulation
         if img_array.shape[0] > 64 or img_array.shape[1] > 64:
             from PIL import Image as PILImage
-            img_pil = PILImage.fromarray(img_array)
+            img_pil = PILImage.fromarray(img_array.astype(np.uint8))
             img_pil = img_pil.resize((64, 64))
             img_array = np.array(img_pil)
         
-        # Apply DCT in 8x8 blocks
-        h, w = img_array.shape
-        h_blocks = h // 8
-        w_blocks = w // 8
-        
-        dct_coeffs = []
-        
-        for i in range(h_blocks):
-            for j in range(w_blocks):
-                block = img_array[i*8:(i+1)*8, j*8:(j+1)*8].astype(float)
-                dct_block = self._dct2d(block)
+        # Process each color channel separately
+        all_bits = []
+        for channel in range(3):  # R, G, B
+            channel_data = img_array[:, :, channel]
+            h, w = channel_data.shape
+            h_blocks = h // 8
+            w_blocks = w // 8
+            
+            dct_coeffs = []
+            
+            for i in range(h_blocks):
+                for j in range(w_blocks):
+                    block = channel_data[i*8:(i+1)*8, j*8:(j+1)*8].astype(float)
+                    dct_block = self._dct2d(block)
+                    
+                    # Reduced quantization to /2 for better quality
+                    quantized = np.round(dct_block / 2).astype(int)
                 
-                # Quantization (simple uniform)
-                quantized = np.round(dct_block / 10).astype(int)
-                
-                # Zigzag scan and flatten
-                dct_coeffs.extend(quantized.flatten())
+                    # Reduced quantization to /2 for better quality
+                    quantized = np.round(dct_block / 2).astype(int)
+                    
+                    # Zigzag scan and flatten
+                    dct_coeffs.extend(quantized.flatten())
+            
+            # Convert to binary representation for this channel
+            for coeff in dct_coeffs:
+                # Use 8-bit signed representation
+                val = int(coeff) & 0xFF
+                all_bits.extend([int(b) for b in format(val, '08b')])
         
-        # Convert to binary representation
-        bits = []
-        for coeff in dct_coeffs:
-            # Use 8-bit signed representation
-            val = int(coeff) & 0xFF
-            bits.extend([int(b) for b in format(val, '08b')])
-        
-        return np.array(bits, dtype=int)
+        return np.array(all_bits, dtype=int)
     
     def _dct2d(self, block):
         """2D DCT Transform"""
@@ -152,34 +158,36 @@ class SourceEncoder:
         return np.array(bits, dtype=int)
     
     def _encode_video(self, frame):
-        """H.265-like encoding for video (simplified)"""
-        # Treat as image for this simulation
-        # In real H.265, we'd do motion estimation
+        """H.265-like encoding for video (simplified) - RGB support"""
+        # Convert to RGB if needed
         if isinstance(frame, np.ndarray):
-            if len(frame.shape) == 3:
-                frame = np.mean(frame, axis=2).astype(np.uint8)
+            if len(frame.shape) == 2:
+                # Convert grayscale to RGB
+                frame = np.stack([frame] * 3, axis=2)
+            elif len(frame.shape) == 3 and frame.shape[2] == 3:
+                # Already RGB, keep as is
+                pass
         
-        # Apply DCT encoding (similar to image)
-        h, w = frame.shape
+        # Process each color channel
+        all_bits = []
+        for channel in range(3):  # R, G, B
+            channel_data = frame[:, :, channel]
+            h, w = channel_data.shape
+            
+            # DCT of channel
+            dct_coeffs = []
+            for i in range(0, h, 8):
+                for j in range(0, w, 8):
+                    if i+8 <= h and j+8 <= w:
+                        block = channel_data[i:i+8, j:j+8].astype(float)
+                        dct_block = self._dct2d(block)
+                        # Reduced quantization to /2 for high quality
+                        quantized = np.round(dct_block / 2).astype(int)
+                        dct_coeffs.extend(quantized.flatten())
+            
+            # Convert to binary for this channel
+            for coeff in dct_coeffs:
+                val = int(coeff) & 0xFF
+                all_bits.extend([int(b) for b in format(val, '08b')])
         
-        # Calculate residual (simplified - just add some noise simulation)
-        residual = frame.astype(float)
-        
-        # DCT of residual
-        dct_coeffs = []
-        for i in range(0, h, 8):
-            for j in range(0, w, 8):
-                if i+8 <= h and j+8 <= w:
-                    block = residual[i:i+8, j:j+8]
-                    dct_block = self._dct2d(block)
-                    # Reduced quantization to /2 for high quality
-                    quantized = np.round(dct_block / 2).astype(int)
-                    dct_coeffs.extend(quantized.flatten())
-        
-        # Convert to binary
-        bits = []
-        for coeff in dct_coeffs:
-            val = int(coeff) & 0xFF
-            bits.extend([int(b) for b in format(val, '08b')])
-        
-        return np.array(bits, dtype=int)
+        return np.array(all_bits, dtype=int)

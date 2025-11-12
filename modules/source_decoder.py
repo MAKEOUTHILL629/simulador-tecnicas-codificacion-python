@@ -51,20 +51,21 @@ class SourceDecoder:
         return result if result else "Error de decodificación"
     
     def _decode_image(self, bits, original_image):
-        """DCT-based decoding for images"""
+        """DCT-based decoding for images - RGB support"""
         # Convert original image to get dimensions
         if isinstance(original_image, Image.Image):
-            img_array = np.array(original_image.convert('L'))
+            img_array = np.array(original_image.convert('RGB'))
         else:
             img_array = np.array(original_image)
-            if len(img_array.shape) == 3:
-                img_array = np.mean(img_array, axis=2).astype(np.uint8)
+            if len(img_array.shape) == 2:
+                # Grayscale to RGB
+                img_array = np.stack([img_array] * 3, axis=2)
         
         # Get target dimensions
         if img_array.shape[0] > 64 or img_array.shape[1] > 64:
             target_h, target_w = 64, 64
         else:
-            target_h, target_w = img_array.shape
+            target_h, target_w = img_array.shape[:2]
         
         # Decode bits to DCT coefficients
         coeffs = []
@@ -76,27 +77,36 @@ class SourceDecoder:
                     byte_val = byte_val - 256
                 coeffs.append(byte_val)
         
-        # Reconstruct image from DCT blocks
+        # Reconstruct each color channel
+        reconstructed_channels = []
         h_blocks = target_h // 8
         w_blocks = target_w // 8
-        reconstructed = np.zeros((target_h, target_w))
+        coeffs_per_channel = h_blocks * w_blocks * 64
         
-        coeff_idx = 0
-        for i in range(h_blocks):
-            for j in range(w_blocks):
-                if coeff_idx + 64 <= len(coeffs):
-                    block_coeffs = np.array(coeffs[coeff_idx:coeff_idx+64]).reshape(8, 8)
-                    # Dequantize - updated to *2 to match encoder
-                    dequantized = block_coeffs * 2
-                    # IDCT
-                    spatial_block = self._idct2d(dequantized)
-                    reconstructed[i*8:(i+1)*8, j*8:(j+1)*8] = spatial_block
-                    coeff_idx += 64
+        for channel in range(3):  # R, G, B
+            reconstructed = np.zeros((target_h, target_w))
+            start_idx = channel * coeffs_per_channel
+            
+            coeff_idx = start_idx
+            for i in range(h_blocks):
+                for j in range(w_blocks):
+                    if coeff_idx + 64 <= len(coeffs):
+                        block_coeffs = np.array(coeffs[coeff_idx:coeff_idx+64]).reshape(8, 8)
+                        # Dequantize - updated to *2 to match encoder
+                        dequantized = block_coeffs * 2
+                        # IDCT
+                        spatial_block = self._idct2d(dequantized)
+                        reconstructed[i*8:(i+1)*8, j*8:(j+1)*8] = spatial_block
+                        coeff_idx += 64
+            
+            # Clip to valid range
+            reconstructed = np.clip(reconstructed, 0, 255).astype(np.uint8)
+            reconstructed_channels.append(reconstructed)
         
-        # Clip to valid range
-        reconstructed = np.clip(reconstructed, 0, 255).astype(np.uint8)
+        # Stack channels
+        rgb_image = np.stack(reconstructed_channels, axis=2)
         
-        return Image.fromarray(reconstructed)
+        return Image.fromarray(rgb_image)
     
     def _idct2d(self, dct_block):
         """2D Inverse DCT"""

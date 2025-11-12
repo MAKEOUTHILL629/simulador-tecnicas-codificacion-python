@@ -76,29 +76,69 @@ class Visualizer:
         
         return fig
     
-    def plot_constellation(self, symbols, title="Constellation Diagram"):
-        """Plot constellation diagram"""
-        fig = Figure(figsize=(8, 8))
+    def plot_constellation(self, symbols, modulation_type="QPSK", title="Constellation Diagram"):
+        """Plot constellation diagram showing both theoretical and actual points"""
+        fig = Figure(figsize=(10, 8))
         ax = fig.add_subplot(111)
         
-        # Extract I and Q components
+        # Extract I and Q components from actual symbols
         I = np.real(symbols)
         Q = np.imag(symbols)
         
-        # Plot
-        ax.scatter(I, Q, alpha=0.5, s=10)
-        ax.set_xlabel('In-Phase (I)')
-        ax.set_ylabel('Quadrature (Q)')
-        ax.set_title(title)
+        # Plot actual received symbols
+        ax.scatter(I, Q, alpha=0.3, s=20, c='blue', label='Received Symbols')
+        
+        # Generate and plot theoretical constellation points
+        if modulation_type == "QPSK":
+            theo_points = np.array([1+1j, 1-1j, -1+1j, -1-1j]) / np.sqrt(2)
+        elif modulation_type == "16-QAM":
+            theo_points = []
+            for i in [-3, -1, 1, 3]:
+                for q in [-3, -1, 1, 3]:
+                    theo_points.append(i + 1j*q)
+            theo_points = np.array(theo_points) / np.sqrt(10)
+        elif modulation_type == "64-QAM":
+            theo_points = []
+            for i in [-7, -5, -3, -1, 1, 3, 5, 7]:
+                for q in [-7, -5, -3, -1, 1, 3, 5, 7]:
+                    theo_points.append(i + 1j*q)
+            theo_points = np.array(theo_points) / np.sqrt(42)
+        elif modulation_type == "256-QAM":
+            theo_points = []
+            for i in range(-15, 16, 2):
+                for q in range(-15, 16, 2):
+                    theo_points.append(i + 1j*q)
+            theo_points = np.array(theo_points) / np.sqrt(170)
+        else:
+            theo_points = np.array([1+1j, 1-1j, -1+1j, -1-1j]) / np.sqrt(2)
+        
+        # Plot theoretical constellation points
+        theo_I = np.real(theo_points)
+        theo_Q = np.imag(theo_points)
+        ax.scatter(theo_I, theo_Q, alpha=1.0, s=100, c='red', marker='x', 
+                  linewidths=2, label=f'Ideal {modulation_type} Points')
+        
+        ax.set_xlabel('In-Phase (I)', fontsize=12)
+        ax.set_ylabel('Quadrature (Q)', fontsize=12)
+        ax.set_title(f'{title}\n{len(symbols)} símbolos, {len(theo_points)} puntos ideales', fontsize=14)
         ax.grid(True, alpha=0.3)
         ax.axhline(y=0, color='k', linewidth=0.5)
         ax.axvline(x=0, color='k', linewidth=0.5)
+        ax.legend(loc='upper right')
         
         # Set equal aspect ratio
-        max_val = max(np.max(np.abs(I)), np.max(np.abs(Q)))
-        ax.set_xlim([-max_val*1.1, max_val*1.1])
-        ax.set_ylim([-max_val*1.1, max_val*1.1])
+        max_val = max(np.max(np.abs(theo_I)), np.max(np.abs(theo_Q)), 
+                     np.max(np.abs(I)) if len(I) > 0 else 1, 
+                     np.max(np.abs(Q)) if len(Q) > 0 else 1)
+        ax.set_xlim([-max_val*1.2, max_val*1.2])
+        ax.set_ylim([-max_val*1.2, max_val*1.2])
         ax.set_aspect('equal')
+        
+        # Add info text
+        info_text = f'Puntos teóricos: {len(theo_points)}\nSímbolos transmitidos: {len(symbols)}'
+        ax.text(0.02, 0.98, info_text, transform=ax.transAxes, 
+               verticalalignment='top', fontsize=10,
+               bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.7))
         
         return fig
     
