@@ -528,6 +528,174 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                         st.caption(f"Resolución: {info['width']}x{info['height']}")
                         st.caption(f"Frame: {info['frame_number']}/{info['total_frames']-1}")
                         st.caption(f"FPS: {info['fps']:.1f}")
+            
+            # =========================================
+            # SECTION: Conclusions and Analysis (Video/Image)
+            # =========================================
+            if source_type in ["Video", "Imagen"]:
+                st.header("📋 Conclusiones y Análisis")
+                
+                # Generate conclusions based on results
+                quality_assessment = ""
+                ber_assessment = ""
+                recommendations = []
+                
+                # BER Assessment
+                if ber == 0:
+                    ber_assessment = "🟢 **Excelente**: Transmisión perfecta sin errores de bits"
+                elif ber < 0.001:
+                    ber_assessment = "🟢 **Muy Bueno**: BER < 0.1%, errores mínimos"
+                elif ber < 0.01:
+                    ber_assessment = "🟡 **Aceptable**: BER < 1%, algunos errores"
+                    recommendations.append("Considerar aumentar SNR o usar modulación más robusta")
+                elif ber < 0.05:
+                    ber_assessment = "🟠 **Degradado**: BER < 5%, errores frecuentes"
+                    recommendations.append("Usar tasa de código más baja para mayor protección")
+                    recommendations.append("Cambiar a QPSK para mayor robustez")
+                else:
+                    ber_assessment = "🔴 **Pobre**: BER > 5%, transmisión muy degradada"
+                    recommendations.append("Aumentar SNR significativamente")
+                    recommendations.append("Usar tasa de código 0.3 para máxima protección")
+                    recommendations.append("Cambiar a QPSK")
+                
+                # PSNR Assessment
+                if psnr > 30:
+                    quality_assessment = "🟢 **Excelente calidad visual**: Diferencias imperceptibles"
+                elif psnr > 25:
+                    quality_assessment = "🟢 **Muy buena calidad**: Ligeras diferencias"
+                elif psnr > 20:
+                    quality_assessment = "🟡 **Buena calidad**: Dentro del rango esperado"
+                elif psnr > 15:
+                    quality_assessment = "🟠 **Calidad aceptable**: Degradación visible"
+                    recommendations.append("El ruido del canal afecta la calidad visual")
+                else:
+                    quality_assessment = "🔴 **Calidad pobre**: Degradación significativa"
+                    recommendations.append("Condiciones del canal muy adversas")
+                
+                # Display conclusions
+                col_conc1, col_conc2 = st.columns(2)
+                
+                with col_conc1:
+                    st.subheader("🎯 Evaluación de Resultados")
+                    st.markdown(f"**Integridad (BER):** {ber_assessment}")
+                    st.markdown(f"**Calidad Visual (PSNR):** {quality_assessment}")
+                    
+                    # SSIM interpretation
+                    if ssim > 0.9:
+                        st.markdown("**Similitud Estructural:** 🟢 Muy alta - preservación excelente")
+                    elif ssim > 0.75:
+                        st.markdown("**Similitud Estructural:** 🟡 Buena - estructuras principales preservadas")
+                    else:
+                        st.markdown("**Similitud Estructural:** 🟠 Moderada - diferencias notables")
+                
+                with col_conc2:
+                    st.subheader("💡 Recomendaciones")
+                    if recommendations:
+                        for rec in recommendations:
+                            st.markdown(f"• {rec}")
+                    else:
+                        st.markdown("✅ Configuración óptima para las condiciones actuales")
+                        st.markdown("• Sistema operando correctamente")
+                        st.markdown("• Calidad dentro de parámetros esperados")
+                
+                # Technical Summary
+                st.subheader("📊 Resumen Técnico")
+                
+                # Create summary table
+                summary_data = {
+                    "Parámetro": ["Tipo de Fuente", "Modulación", "SNR", "Canal", "Tasa de Código", 
+                                 "Bits de Fuente", "Bits Codificados", "BER", "PSNR", "SSIM"],
+                    "Valor": [source_type, modulation, f"{snr_db} dB", fading_type, 
+                             f"{code_rate:.1f}" if code_rate else "N/A",
+                             f"{len(encoded_source):,}", f"{len(encoded_channel):,}",
+                             f"{ber:.6f}", f"{psnr:.2f} dB", f"{ssim:.4f}"]
+                }
+                
+                # Display as formatted text
+                col_sum1, col_sum2, col_sum3 = st.columns(3)
+                with col_sum1:
+                    st.markdown("**Configuración:**")
+                    st.caption(f"• Tipo: {source_type}")
+                    st.caption(f"• Modulación: {modulation}")
+                    st.caption(f"• SNR: {snr_db} dB")
+                    st.caption(f"• Canal: {fading_type}")
+                
+                with col_sum2:
+                    st.markdown("**Transmisión:**")
+                    st.caption(f"• Bits fuente: {len(encoded_source):,}")
+                    st.caption(f"• Bits canal: {len(encoded_channel):,}")
+                    overhead = len(encoded_channel) - len(encoded_source)
+                    st.caption(f"• Overhead: {overhead:,} bits ({overhead/len(encoded_source)*100:.1f}%)")
+                    st.caption(f"• Símbolos: {len(modulated_signal):,}")
+                
+                with col_sum3:
+                    st.markdown("**Métricas de Calidad:**")
+                    st.caption(f"• BER: {ber:.6f} ({ber*100:.4f}%)")
+                    st.caption(f"• PSNR: {psnr:.2f} dB")
+                    st.caption(f"• SSIM: {ssim:.4f}")
+                    info_preserved = (mutual_info/entropy_input*100) if entropy_input > 0 else 100
+                    st.caption(f"• Info preservada: {info_preserved:.1f}%")
+                
+                # Conclusion Text
+                st.subheader("📝 Conclusión")
+                conclusion_text = f"""
+Con la configuración actual (SNR={snr_db} dB, {modulation}, tasa={code_rate if code_rate else 'N/A'}), 
+el sistema de transmisión de {source_type.lower()} logró un BER de {ber:.6f} ({ber*100:.4f}%).
+
+La calidad visual resultante (PSNR={psnr:.2f} dB, SSIM={ssim:.4f}) {"es adecuada para la mayoría de aplicaciones" if psnr > 20 else "indica degradación que puede ser perceptible"}.
+
+{"La transmisión fue exitosa sin errores de bits detectables." if ber == 0 else f"Se detectaron errores que corresponden aproximadamente a {int(ber * len(encoded_source))} bits erróneos de {len(encoded_source):,} transmitidos."}
+
+**Nota técnica:** La calidad base (PSNR ~20-25 dB) está limitada por la compresión DCT, 
+similar a codecs como JPEG o H.264. Esto es por diseño y no representa errores de transmisión.
+"""
+                st.markdown(conclusion_text)
+                
+                # Download Conclusion Report button
+                report_content = f"""
+# REPORTE DE SIMULACIÓN DE VIDEO/IMAGEN
+# Simulador 5G/6G
+# Fecha: {np.datetime64('now')}
+
+## CONFIGURACIÓN
+- Tipo de fuente: {source_type}
+- Modulación: {modulation}
+- SNR: {snr_db} dB
+- Eb/N0: {eb_n0_db} dB
+- Canal: {fading_type}
+- Tasa de código: {code_rate if code_rate else 'N/A'}
+
+## TRANSMISIÓN
+- Bits de fuente: {len(encoded_source):,}
+- Bits codificados: {len(encoded_channel):,}
+- Overhead: {len(encoded_channel) - len(encoded_source):,} bits ({(len(encoded_channel)-len(encoded_source))/len(encoded_source)*100:.1f}%)
+- Símbolos transmitidos: {len(modulated_signal):,}
+
+## MÉTRICAS DE CALIDAD
+- BER: {ber:.6f} ({ber*100:.4f}%)
+- PSNR: {psnr:.2f} dB
+- SSIM: {ssim:.4f}
+- Entropía entrada H(X): {entropy_input:.4f} bits
+- Entropía salida H(Y): {entropy_output:.4f} bits
+- Información mutua I(X;Y): {mutual_info:.4f} bits
+
+## EVALUACIÓN
+BER: {ber_assessment}
+Calidad Visual: {quality_assessment}
+
+## RECOMENDACIONES
+{chr(10).join(['- ' + r for r in recommendations]) if recommendations else '- Configuración óptima'}
+
+## CONCLUSIÓN
+{conclusion_text}
+"""
+                st.download_button(
+                    label="📥 Descargar Reporte de Conclusiones",
+                    data=report_content,
+                    file_name=f"reporte_simulacion_{source_type.lower()}_{snr_db}dB.txt",
+                    mime="text/plain",
+                    help="Descargar reporte completo de la simulación"
+                )
         
             status_text.text("✅ Simulación completada!")
             progress_bar.progress(1.0)
