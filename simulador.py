@@ -625,7 +625,8 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                     st.caption(f"• Bits fuente: {len(encoded_source):,}")
                     st.caption(f"• Bits canal: {len(encoded_channel):,}")
                     overhead = len(encoded_channel) - len(encoded_source)
-                    st.caption(f"• Overhead: {overhead:,} bits ({overhead/len(encoded_source)*100:.1f}%)")
+                    overhead_pct = (overhead/len(encoded_source)*100) if len(encoded_source) > 0 else 0
+                    st.caption(f"• Overhead: {overhead:,} bits ({overhead_pct:.1f}%)")
                     st.caption(f"• Símbolos: {len(modulated_signal):,}")
                 
                 with col_sum3:
@@ -633,8 +634,8 @@ if st.button("🚀 Iniciar Simulación", type="primary"):
                     st.caption(f"• BER: {ber:.6f} ({ber*100:.4f}%)")
                     st.caption(f"• PSNR: {psnr:.2f} dB")
                     st.caption(f"• SSIM: {ssim:.4f}")
-                    info_preserved = (mutual_info/entropy_input*100) if entropy_input > 0 else 100
-                    st.caption(f"• Info preservada: {info_preserved:.1f}%")
+                    info_preserved_str = f"{(mutual_info/entropy_input*100):.1f}%" if entropy_input > 0 else "N/A"
+                    st.caption(f"• Info preservada: {info_preserved_str}")
                 
                 # Conclusion Text
                 st.subheader("📝 Conclusión")
@@ -652,10 +653,13 @@ similar a codecs como JPEG o H.264. Esto es por diseño y no representa errores 
                 st.markdown(conclusion_text)
                 
                 # Download Conclusion Report button
+                from datetime import datetime
+                current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                overhead_report_pct = ((len(encoded_channel)-len(encoded_source))/len(encoded_source)*100) if len(encoded_source) > 0 else 0
                 report_content = f"""
 # REPORTE DE SIMULACIÓN DE VIDEO/IMAGEN
 # Simulador 5G/6G
-# Fecha: {np.datetime64('now')}
+# Fecha: {current_time}
 
 ## CONFIGURACIÓN
 - Tipo de fuente: {source_type}
@@ -668,7 +672,7 @@ similar a codecs como JPEG o H.264. Esto es por diseño y no representa errores 
 ## TRANSMISIÓN
 - Bits de fuente: {len(encoded_source):,}
 - Bits codificados: {len(encoded_channel):,}
-- Overhead: {len(encoded_channel) - len(encoded_source):,} bits ({(len(encoded_channel)-len(encoded_source))/len(encoded_source)*100:.1f}%)
+- Overhead: {len(encoded_channel) - len(encoded_source):,} bits ({overhead_report_pct:.1f}%)
 - Símbolos transmitidos: {len(modulated_signal):,}
 
 ## MÉTRICAS DE CALIDAD
